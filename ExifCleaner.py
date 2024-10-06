@@ -4,6 +4,14 @@ from pathlib import Path
 import os
 import sys
 
+
+# global vars
+
+singleFile = False
+verbose = False
+recursive = False
+
+filePath = Path.cwd()
 runPath = Path.cwd()
 file = Path.cwd()
 dirname = 'ExifCleanImages'
@@ -20,18 +28,13 @@ def PrintExifToConsole(image):
         print("exception when printing exif to console")
 
 def CreateNewExifCleanFolder(directory):
-    global dirname 
-    dirname = 'ExifCleanImages'
-    # in directory add a new directory called ExifCleanImages
-    # put exif clean version of each image in local dir in there
-    # check if dir exists first though
     dirExists = True
     dirExists = os.path.exists(directory / dirname)  
 
     if(dirExists == False): 
         os.mkdir(directory / dirname)
         if(os.path.exists(directory / dirname)): 
-            print('Create '+dirname+' success: true')
+            print('Created '+dirname+'')
         else:
             print('Failed to create the ' + dirname + 'direcory')
 
@@ -67,9 +70,21 @@ def CleanExifAllLocalImages(localPath):
 
 
 def readCommandLineArgs():
-    index = 0
+    global singleFile
+    global recursive
+    global verbose
     global runPath 
+    global singeFile
+    global filePath
+    global file
+    global dirname
+
     systemArgs = sys.argv
+    index = 0
+
+    for checkverbose in systemArgs:
+        if(checkverbose == '-v' or checkverbose == '-V'):
+            verbose = True
 
 
     for arg in systemArgs:
@@ -82,18 +97,26 @@ def readCommandLineArgs():
             if(Path(systemArgs[index + 1]).is_dir()):
                 runPath = Path(systemArgs[index + 1])
                 index += 2
+                if(verbose):
+                    print('Got directory for images:')
+                    print(runPath)
                 continue
         elif(arg == '-f'):
             if(len(systemArgs)-1 < index+1):
-                print('No path provided after argument -p')
+                print('No path provided after argument -f')
                 print('Correct syntax is: python '+ systemArgs[0] + ' -f /path/to/file')
                 exit(1)
             if(Path(systemArgs[index + 1]).is_file()):
-                runPath = Path(systemArgs[index + 1])
+                singleFile = True
+                filePath = Path(systemArgs[index + 1])
+                if(verbose):
+                    print('Single file useage on path:')
+                    print(filePath)
             else:
-                print('not file')
-        #print('index incr')
-
+                print('Path entered is not a file, double check your arguments')
+                exit(1)
+        elif(arg == '-r'):
+            recursive = True
         elif(arg == '-h' or arg == 'h' or arg == '--help' or arg == 'help'):
             print('--- Help Menu ---')
             print('To clean exif on all files in a folder provide the folder path:')
@@ -108,6 +131,8 @@ def readCommandLineArgs():
 # Begin exectuion
 
 readCommandLineArgs()
+
+
 CreateNewExifCleanFolder(runPath)
 CleanExifAllLocalImages(runPath)
 
