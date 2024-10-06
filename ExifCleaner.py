@@ -105,6 +105,7 @@ def readCommandLineArgs():
 
 
 
+# Begin exectuion
 
 readCommandLineArgs()
 CreateNewExifCleanFolder(runPath)
@@ -113,50 +114,3 @@ CleanExifAllLocalImages(runPath)
 
 
 
-#createNewExifCleanFolder(Path.cwd())
-
-
-# Itterate all the photos in papes
-dirstring = "/home/blendedcookie/Pictures/Papes/"
-
-#path = Path(dirstring)
-#for file in listFilesInDir(dirstring):
-#    print(file)
-
-   # if(os.path.isfile(file)):
-   #         print("File:" + filename + " - Exif:")
-   #         #img = PIL.Image.open('/home/blendedcookie/Pictures/Papes/1699324645942083.jpg')
-   #         img = PIL.Image.open(dirstring / filename)
-   #         #exif_data = img._getexif()
-   #         img.show()
-   #     #if(exif_data != "None"):
-   #         #print(exif_data)
-   # 
-   #     #for k, v in exif_data.items():
-   #     #    print("Tag", k, "Value", v)
-   # else: 
-   #    print("Is Dir? - " + filename)
-
-
-
-
-
-#
-#img = PIL.Image.open('/home/blendedcookie/Pictures/Papes/1699324645942083.jpg')
-#exif_data = img._getexif()
-#
-#print(exif_data)
-#
-#for k, v in exif_data.items():
-#    print("Tag", k, "Value", v)
-#
-#
-# Get command line args
-
-# find file, local first or follow path
-
-# read meta data
-
-# remove meta data
-
-# read meta data again as a test and output succes/fail message
