@@ -43,30 +43,37 @@ def CleanExifAllLocalImages(localPath):
 
     for file in localFiles:
         try:
-            image = Image.open(file)
-            if(image != 'undefined' and image.format != 'png'): # Pillow will not remove exif from PNG by default
-                filename = image.filename.split('/')[-1]
-                print(filename)
-                print("Exif Before: ")
-                PrintExifToConsole(image)
-                global dirname
-                prepath = localPath / dirname
-                buildpath = prepath / filename 
-
-                image.save(buildpath)
-                image.close()
-
-                imageAfter = Image.open(buildpath)
-                print("Exif After: ")
-                PrintExifToConsole(imageAfter)
-
+            HandleSingleImage(file)
         except Exception as error: 
             print("Got an exception: " + error)
             print("Type: " + type(error))
             print("Not an image?")
 
+def HandleSingleImage(filepath): 
+    # validate filepath
+    try:
+        if(os.path.isfile(filepath) == False):
+            print("Path is not a file, faiure")
+            exit(1)
 
+        image = Image.open(filepath)
+        if(image != 'undefined' and image.format != 'png'): # Pillow will not remove exif from PNG by default
+            filename = image.filename.split('/')[-1]
+            print(filename)
+            print("Exif Before: ")
+            PrintExifToConsole(image)
+            global dirname
+            prepath = localPath / dirname
+            buildpath = prepath / filename 
 
+            image.save(buildpath)
+            image.close()
+
+            imageAfter = Image.open(buildpath)
+            print("Exif After: ")
+            PrintExifToConsole(imageAfter)
+    except Exception as error:
+        print(error)
 
 
 def readCommandLineArgs():
@@ -123,6 +130,7 @@ def readCommandLineArgs():
             print('-p {folderpath}')
             print('To clean exif on a single file provide the file path:')
             print('-f {filepath}')
+            print('-r Recursivly go through directoreis')
         index += 1
 
 
