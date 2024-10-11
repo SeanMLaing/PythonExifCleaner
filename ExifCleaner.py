@@ -17,66 +17,7 @@ file = Path.cwd()
 dirname = 'ExifCleanImages'
 
 
-def listFilesInDir(directory):
-    return [f for f in Path(directory).iterdir() if f.is_file()]
-
-def PrintExifToConsole(image):
-    try:
-        for exif in image.getexif():
-            print(exif)
-    except:
-        print("exception when printing exif to console")
-
-def CreateNewExifCleanFolder(directory):
-    dirExists = True
-    dirExists = os.path.exists(directory / dirname)  
-
-    if(dirExists == False): 
-        os.mkdir(directory / dirname)
-        if(os.path.exists(directory / dirname)): 
-            print('Created '+dirname+'')
-        else:
-            print('Failed to create the ' + dirname + 'direcory')
-
-def CleanExifAllLocalImages(localPath):
-    localFiles = listFilesInDir(localPath)
-
-    for file in localFiles:
-        try:
-            HandleSingleImage(file)
-        except Exception as error: 
-            print("Got an exception: " + error)
-            print("Type: " + type(error))
-            print("Not an image?")
-
-def HandleSingleImage(filepath): 
-    # validate filepath
-    try:
-        if(os.path.isfile(filepath) == False):
-            print("Path is not a file, faiure")
-            exit(1)
-
-        image = Image.open(filepath)
-        if(image != 'undefined' and image.format != 'png'): # Pillow will not remove exif from PNG by default
-            filename = image.filename.split('/')[-1]
-            print(filename)
-            print("Exif Before: ")
-            PrintExifToConsole(image)
-            global dirname
-            prepath = localPath / dirname
-            buildpath = prepath / filename 
-
-            image.save(buildpath)
-            image.close()
-
-            imageAfter = Image.open(buildpath)
-            print("Exif After: ")
-            PrintExifToConsole(imageAfter)
-    except Exception as error:
-        print(error)
-
-
-def readCommandLineArgs():
+def ReadCommandLineArgs():
     global singleFile
     global recursive
     global verbose
@@ -135,13 +76,94 @@ def readCommandLineArgs():
 
 
 
+def SingleFileHandler(filepath):
+    HandleSingleImage(filepath)
+
+def HandleDir(dirpath):
+    global recursive
+    global verbose
+    
+    if(recursive):
+        # get all dir in current
+        # for each dir, call HandleDir
+        print("if")    
+
+    for file in ListFilesInDir(dirpath):
+        HandleSingleImage(dirpath / file)
+
+def ListChildDirs(localPath):
+    return [f for f in Path(localPath).iterdir() if f.is_dir()]
+
+def ListFilesInDir(directory):
+    return [f for f in Path(directory).iterdir() if f.is_file()]
+
+def PrintExifToConsole(image):
+    try:
+        for exif in image.getexif():
+            print(exif)
+    except:
+        print("exception when printing exif to console")
+
+def CreateNewExifCleanFolder(directory):
+    dirExists = True
+    dirExists = os.path.exists(directory / dirname)  
+
+    if(dirExists == False): 
+        os.mkdir(directory / dirname)
+        if(os.path.exists(directory / dirname)): 
+            print('Created '+dirname+'')
+        else:
+            print('Failed to create the ' + dirname + 'direcory')
+
+def CleanExifAllLocalImages(localPath):
+    localFiles = ListFilesInDir(localPath)
+
+    for file in localFiles:
+        try:
+            HandleSingleImage(file)
+        except Exception as error: 
+            print("Got an exception: " + error)
+            print("Type: " + type(error))
+            print("Not an image?")
+
+def HandleSingleImage(filepath): 
+    global verbose
+    # validate filepath
+    try:
+        if(os.path.isfile(filepath) == False):
+            print("Path is not a file, faiure")
+            exit(1)
+
+        image = Image.open(filepath)
+        if(image != 'undefined' and image.format != 'png'): # Pillow will not remove exif from PNG by default
+            filename = image.filename.split('/')[-1]
+            if(verbose):
+                print(filename)
+                print("Exif Before: ")
+                PrintExifToConsole(image)
+            global dirname
+            prepath = localPath / dirname
+            buildpath = prepath / filename 
+
+            image.save(buildpath)
+            image.close()
+
+            if(verbose):
+                imageAfter = Image.open(buildpath)
+                print("Exif After: ")
+                PrintExifToConsole(imageAfter)
+    except Exception as error:
+        print(error)
+
+
+
 
 # Begin exectuion
 # todo:
 # put in method
 # handle paths for multi / single / recursive
 
-readCommandLineArgs()
+ReadCommandLineArgs()
 
 
 CreateNewExifCleanFolder(runPath)
