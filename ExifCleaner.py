@@ -137,6 +137,9 @@ def readCommandLineArgs():
 
 
 # Begin exectuion
+# todo:
+# put in method
+# handle paths for multi / single / recursive
 
 readCommandLineArgs()
 
