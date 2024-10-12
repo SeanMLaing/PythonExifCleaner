@@ -1,267 +1,391 @@
 # Clean exif data from a JPEG file 
 from PIL import Image
-from pathlib import Path
 import os
-import sys
+
+#--------------------- Version 2 -------------------------
+
+# Global variables
+RUNPATH = os.getcwd()
+RECURSIVE = False
+DIRECTORYNAME = "ExifCleanedImage"
+SINGLEFILEMODE = False
+SUPPORTEDFILETYPES = ["jpg", "jpeg", "tiff", "im"]
 
 
-# global vars
-
-singleFile = False
-verbose = False
-recursive = False
-
-filePath = Path.cwd()
-runPath = Path.cwd()
-file = Path.cwd()
-dirname = 'ExifCleanImages'
-
-
-def ReadCommandLineArgs():
-    global singleFile
-    global recursive
-    global verbose
-    global runPath 
-    global singeFile
-    global filePath
-    global file
-    global dirname
-
-    systemArgs = sys.argv
-    index = 0
-
-    for checkverbose in systemArgs:
-        if(checkverbose == '-v' or checkverbose == '-V'):
-            verbose = True
-
-
-    for arg in systemArgs:
-        #print('arg: ' + arg)
-        if(arg == '-p'):
-            if(len(systemArgs)-1 < index+1):
-                print('No path provided after argument -p')
-                print('Correct syntax is: python '+ systemArgs[0] + ' -p /path/to/directory')
-                exit(1)
-            if(Path(systemArgs[index + 1]).is_dir()):
-                runPath = Path(systemArgs[index + 1])
-                index += 2
-                if(verbose):
-                    print('Got directory for images:')
-                    print(runPath)
-                continue
-        elif(arg == '-f'):
-            if(len(systemArgs)-1 < index+1):
-                print('No path provided after argument -f')
-                print('Correct syntax is: python '+ systemArgs[0] + ' -f /path/to/file')
-                exit(1)
-            if(Path(systemArgs[index + 1]).is_file()):
-                singleFile = True
-                filePath = Path(systemArgs[index + 1])
-                #runPath = Path.parent(filePath)
-                runPath = os.path.basename(filePath)
-                if(verbose):
-                    print('Single file useage on path:')
-                    print(filePath)
-            else:
-                print('Path entered is not a file, double check your arguments')
-                exit(1)
-        elif(arg == '-r'):
-            recursive = True
-        elif(arg == '-h' or arg == 'h' or arg == '--help' or arg == 'help'):
-            print('--- Help Menu ---')
-            print('To clean exif on all files in a folder provide the folder path:')
-            print('-p {folderpath}')
-            print('To clean exif on a single file provide the file path:')
-            print('-f {filepath}')
-            print('-r Recursivly go through directoreis')
-        index += 1
-
-
-
-def SingleFileHandler(filepath):
-    HandleSingleImage(filepath)
-
-def HandleDir(dirpath):
-    global recursive
-    global verbose
-    global dirname 
-
-    if(recursive):
-        # get all dir in current
-        # for each dir, call HandleDir
-        if(verbose):
-            print("Recursive, looking through: ")
-            print(dirpath)
-        childDirs = ListChildDirs(dirpath)
-        for cdir in childDirs:
-            if(os.path.dirname == dirname):
-                continue
-
-            if(verbose):
-                print("Found a child dir: ")
-                print(cdir)
-            HandleDir(cdir)
-    
-    # check for the exif cleaned dir
-    CreateNewExifCleanFolder(dirpath)
-
-    for file in ListFilesInDir(dirpath):
-        HandleSingleImage(dirpath / file)
-
-def ListChildDirs(localPath):
-    return [f for f in Path(localPath).iterdir() if f.is_dir()]
-
-def ListFilesInDir(directory):
-    return [f for f in Path(directory).iterdir() if f.is_file()]
-
-def PrintExifToConsole(image):
+def ProcessSingleImage(FilePath):
     try:
-        for exif in image.getexif():
-            print(exif)
-    except:
-        print("exception when printing exif to console")
 
-def CreateNewExifCleanFolder(directory):
-    global verbose
-    global singleFile
-    global dirname 
-    if(singleFile or IsImagePath(directory)):
-        directory = os.path.dirname(directory)
-        if(verbose):
-            print("Provided directory is a file")
-            print("new path:")
-            print(directory)
+        # verify it is a file not a dir
+        if not os.path.isfile(FilePath): 
+            print(FilePath)
+            return False
 
+        # verify it is a supported filetype
+        if not IsSupportedFileType(FilePath): 
+            return False
 
-    joinedDirPath = os.path.join(directory, dirname)
-
-    dirExists = True
-    dirExists = os.path.exists(joinedDirPath)  
-    
-    if(verbose):
-        print("Checking if a clean folder exists")
-
-    if(dirExists == False): 
-        os.mkdir(joinedDirPath)
-        if(os.path.exists(joinedDirPath)): 
-            print('Created '+dirname+'')
+        print("# verify the exif cleaned dir exists in the files local dir")
+        workingpath = os.path.dirname(FilePath)
+        if not DoesExifCleanedDirExistLocally(workingpath): 
+            return False
         else:
-            print('Failed to create the ' + dirname + 'direcory')
+            if not CreateLocalExifCleanDir(workingpath):
+                return False
+        cleandirpath = os.path.join(workingpath, DIRECTORYNAME)
 
-def CleanExifAllLocalImages(localPath):
-    localFiles = ListFilesInDir(localPath)
+        print("# open the file")
+        image = Image.open(FilePath)
 
-    for file in localFiles:
-        try:
-            HandleSingleImage(file)
-        except Exception as error: 
-            print("Got an exception: " + error)
-            print("Type: " + type(error))
-            print("Not an image?")
+        print("# save a new version in the exif cleaned dir")
+        if(SaveNewImage(image, cleandirpath) == False):
+            return False
 
-def HandleSingleImage(filepath): 
-    global verbose
-    global dirname
-    if(verbose):
-        print("Starting single file")
-    try:
-        if(os.path.isfile(filepath) == False):
-            print("Path is not a file, faiure")
-            exit(1)
-        if(verbose):
-            print("check if filepath is an image:")
-            print(filepath)
-
-        if(IsImagePath(filepath) != True):
-            # is not image, need to break
-            if(verbose):
-                print("Provided path is not an image file: ")
-                print(filepath)
-            print("Not a filepath, quitting...")
-            exit(1)
-        else:
-            if(verbose):
-                print("Got an image at: ")
-                print(filepath)
-
-        image = Image.open(filepath)
-        if(image != 'undefined'): 
-            filename = image.filename.split('/')[-1]
-            localPath = os.path.dirname(filepath)
-            if(verbose):
-                print(filename)
-                print("Exif Before: ")
-                PrintExifToConsole(image)
-            prepath = os.path.join(localPath, dirname)
-            buildpath = os.path.join(prepath, filename)
-
-            image.save(buildpath)
-            image.close()
-
-            if(verbose):
-                imageAfter = Image.open(buildpath)
-                print("Exif After: ")
-                PrintExifToConsole(imageAfter)
+            print("# close file")
         image.close()
-    except Exception as error:
-        print("except at HandleSingleImage")
-        print(error)
 
-def IsImagePath(filepath):
-    # returns true if provided filepath is an image
-    supportedImageTypes = ["jpg", "jpeg", "tiff", "im"] 
-    
-    # dev code
-    print(filepath)
+    except Exception as errmsg:
+        print(errmsg)
 
-    for imgtype in supportedImageTypes:
-        try:
-            if(verbose):
-                print("Check if filetype is: " + imgtype)
-            if(os.path.basename(filepath).endswith(imgtype)):
+    # success
+    return True
+
+
+def SaveNewImage(IMG, CleanDirPath):
+    try:
+        imgname = IMG.filename.split('/')[-1]
+
+        newimgpath = os.path.join(CleanDirPath, IMG.filename.split('/')[-1]) 
+        IMG.save(newimgpath)
+
+        if(os.path.exists(newimgpath)):
+            if(os.path.isfile(newimgpath)):
+                    return True            
+
+    except Exception as errmsg:
+        print(errmsg)
+        return False
+
+    return False 
+
+
+def IsSupportedFileType(FilePath):
+    global SUPPOERTEDFILETYPES 
+
+    try:
+        for imgtype in SUPPORTEDFILETYPES:
+            if(os.path.basename(FilePath).endswith(imgtype)):
                 return True
-        except Exception as error:
-            print("Not an image or failed to read file:")
-            print(filepath)
-
-    # If we got here it is not a supported image type
-    print("Not an image or not a supported type:")
-    print(filepath)
+    except Exception as errmsg:
+        print(errmsg)
+        
     return False
 
 
+def DoesExifCleanedDirExistLocally(FilePath):
+    fileroot = os.path.dirname(FilePath)
+    
+    localdirs = os.listdir(fileroot)
+    
+    if(os.path.exists(os.path.join(fileroot, DIRECTORYNAME)
+            return True
 
-# Begin exectuion
-# todo:
-# put in method
-# handle paths for multi / single / recursive
-def main():
-    print("Starting to clean exif from image(s)")
-    global singleFile
-    global runPath
-    global verbose
+    return False
+
+
+def CreateLocalExifCleanDir(WorkingPath):
+    global DIRECTORYNAME
+    
+    if(DoesExifCleanedDirExistLocally(WorkingPath)):
+        return True
+    
+    dirfullpath = os.path.join(WorkingPath, DIRECTORYNAME)
 
     try:
-        ReadCommandLineArgs()
+        os.mkdir(dirfullpath)
         
-        if(verbose):
-            print("Got command line args")
+        if(os.path.exists(joinedDirPath)): 
+            return True
+        else: 
+            return False
 
-        CreateNewExifCleanFolder(runPath)
-
-        if(verbose):
-            print("created folder")
-
-        if(singleFile):
-            HandleSingleImage(filePath)
-
-        else:
-            HandleDir(runPath)
-    except Exception as error:
-        print("except at main")
-        print(error)
+    except Exception as errmsg:
+        print(errmsg)
+        return False
 
 
-    print("Exif Cleaner complete")
+def main():
+    global DIRPATH
+    global FILEPATH
+    global RECURSIVE
+    global DIRECTORYNAME
+    global SINGLEFILEMODE
+    
+    GetCommandLineArgs()
 
-main()
+    if(SINGLEFILEMODE):
+        ProcessSingleFile(FILEPATH)
+    else:
+        ProcessDirectory(RUNPATH)
+
+
+#main()
+#-------Testing----------
+print(ProcessSingleImage(os.path.abspath("/home/blendedcookie/Pictures/exifImages/Canon.jpg")))
+#--------------------- Version 2 -------------------------
+# global vars
+
+#singleFile = False
+#verbose = False
+#recursive = False
+#
+#filePath = Path.cwd()
+#runPath = Path.cwd()
+#file = Path.cwd()
+#dirname = 'ExifCleanImages'
+#
+#
+#def ReadCommandLineArgs():
+#    global singleFile
+#    global recursive
+#    global verbose
+#    global runPath 
+#    global singeFile
+#    global filePath
+#    global file
+#    global dirname
+#
+#    systemArgs = sys.argv
+#    index = 0
+#
+#    for checkverbose in systemArgs:
+#        if(checkverbose == '-v' or checkverbose == '-V'):
+#            verbose = True
+#
+#
+#    for arg in systemArgs:
+#        #print('arg: ' + arg)
+#        if(arg == '-p'):
+#            if(len(systemArgs)-1 < index+1):
+#                print('No path provided after argument -p')
+#                print('Correct syntax is: python '+ systemArgs[0] + ' -p /path/to/directory')
+#                exit(1)
+#            if(Path(systemArgs[index + 1]).is_dir()):
+#                runPath = Path(systemArgs[index + 1])
+#                index += 2
+#                if(verbose):
+#                    print('Got directory for images:')
+#                    print(runPath)
+#                continue
+#        elif(arg == '-f'):
+#            if(len(systemArgs)-1 < index+1):
+#                print('No path provided after argument -f')
+#                print('Correct syntax is: python '+ systemArgs[0] + ' -f /path/to/file')
+#                exit(1)
+#            if(Path(systemArgs[index + 1]).is_file()):
+#                singleFile = True
+#                filePath = Path(systemArgs[index + 1])
+#                #runPath = Path.parent(filePath)
+#                runPath = os.path.basename(filePath)
+#                if(verbose):
+#                    print('Single file useage on path:')
+#                    print(filePath)
+#            else:
+#                print('Path entered is not a file, double check your arguments')
+#                exit(1)
+#        elif(arg == '-r'):
+#            recursive = True
+#        elif(arg == '-h' or arg == 'h' or arg == '--help' or arg == 'help'):
+#            print('--- Help Menu ---')
+#            print('To clean exif on all files in a folder provide the folder path:')
+#            print('-p {folderpath}')
+#            print('To clean exif on a single file provide the file path:')
+#            print('-f {filepath}')
+#            print('-r Recursivly go through directoreis')
+#        index += 1
+#
+#
+#
+#def SingleFileHandler(filepath):
+#    HandleSingleImage(filepath)
+#
+#def HandleDir(dirpath):
+#    global recursive
+#    global verbose
+#    global dirname 
+#
+#    if(recursive):
+#        # get all dir in current
+#        # for each dir, call HandleDir
+#        if(verbose):
+#            print("Recursive, looking through: ")
+#            print(dirpath)
+#        childDirs = ListChildDirs(dirpath)
+#        for cdir in childDirs:
+#            if(os.path.dirname == dirname):
+#                continue
+#
+#            if(verbose):
+#                print("Found a child dir: ")
+#                print(cdir)
+#            HandleDir(cdir)
+#    
+#    # check for the exif cleaned dir
+#    CreateNewExifCleanFolder(dirpath)
+#
+#    for file in ListFilesInDir(dirpath):
+#        HandleSingleImage(dirpath / file)
+#
+#def ListChildDirs(localPath):
+#    return [f for f in Path(localPath).iterdir() if f.is_dir()]
+#
+#def ListFilesInDir(directory):
+#    return [f for f in Path(directory).iterdir() if f.is_file()]
+#
+#def PrintExifToConsole(image):
+#    try:
+#        for exif in image.getexif():
+#            print(exif)
+#    except:
+#        print("exception when printing exif to console")
+#
+#def CreateNewExifCleanFolder(directory):
+#    global verbose
+#    global singleFile
+#    global dirname 
+#    if(singleFile or IsImagePath(directory)):
+#        directory = os.path.dirname(directory)
+#        if(verbose):
+#            print("Provided directory is a file")
+#            print("new path:")
+#            print(directory)
+#
+#
+#    joinedDirPath = os.path.join(directory, dirname)
+#
+#    dirExists = True
+#    dirExists = os.path.exists(joinedDirPath)  
+#    
+#    if(verbose):
+#        print("Checking if a clean folder exists")
+#
+#    if(dirExists == False): 
+#        os.mkdir(joinedDirPath)
+#        if(os.path.exists(joinedDirPath)): 
+#            print('Created '+dirname+'')
+#        else:
+#            print('Failed to create the ' + dirname + 'direcory')
+#
+#def CleanExifAllLocalImages(localPath):
+#    localFiles = ListFilesInDir(localPath)
+#
+#    for file in localFiles:
+#        try:
+#            HandleSingleImage(file)
+#        except Exception as error: 
+#            print("Got an exception: " + error)
+#            print("Type: " + type(error))
+#            print("Not an image?")
+#
+#def HandleSingleImage(filepath): 
+#    global verbose
+#    global dirname
+#    if(verbose):
+#        print("Starting single file")
+#    try:
+#        if(os.path.isfile(filepath) == False):
+#            print("Path is not a file, faiure")
+#            exit(1)
+#        if(verbose):
+#            print("check if filepath is an image:")
+#            print(filepath)
+#
+#        if(IsImagePath(filepath) != True):
+#            # is not image, need to break
+#            if(verbose):
+#                print("Provided path is not an image file: ")
+#                print(filepath)
+#            print("Not a filepath, quitting...")
+#            exit(1)
+#        else:
+#            if(verbose):
+#                print("Got an image at: ")
+#                print(filepath)
+#
+#        image = Image.open(filepath)
+#        if(image != 'undefined'): 
+#            filename = image.filename.split('/')[-1]
+#            localPath = os.path.dirname(filepath)
+#            if(verbose):
+#                print(filename)
+#                print("Exif Before: ")
+#                PrintExifToConsole(image)
+#            prepath = os.path.join(localPath, dirname) buildpath = os.path.join(prepath, filename) image.save(buildpath)
+#            image.close()
+#
+#            if(verbose):
+#                imageAfter = Image.open(buildpath)
+#                print("Exif After: ")
+#                PrintExifToConsole(imageAfter)
+#        image.close()
+#    except Exception as error:
+#        print("except at HandleSingleImage")
+#        print(error)
+#
+#def IsImagePath(filepath):
+#    # returns true if provided filepath is an image
+#    supportedImageTypes = ["jpg", "jpeg", "tiff", "im"] 
+#    
+#    # dev code
+#    print(filepath)
+#
+#    for imgtype in supportedImageTypes:
+#        try:
+#            if(verbose):
+#                print("Check if filetype is: " + imgtype)
+#            if(os.path.basename(filepath).endswith(imgtype)):
+#                return True
+#        except Exception as error:
+#            print("Not an image or failed to read file:")
+#            print(filepath)
+#
+#    # If we got here it is not a supported image type
+#    print("Not an image or not a supported type:")
+#    print(filepath)
+#    return False
+#
+#
+#
+## Begin exectuion
+## todo:
+## put in method
+## handle paths for multi / single / recursive
+#def main():
+#    print("Starting to clean exif from image(s)")
+#    global singleFile
+#    global runPath
+#    global verbose
+#
+#    try:
+#        ReadCommandLineArgs()
+#        
+#        if(verbose):
+#            print("Got command line args")
+#
+#        CreateNewExifCleanFolder(runPath)
+#
+#        if(verbose):
+#            print("created folder")
+#
+#        if(singleFile):
+#            HandleSingleImage(filePath)
+#
+#        else:
+#            HandleDir(runPath)
+#    except Exception as error:
+#        print("except at main")
+#        print(error)
+#
+#
+#    print("Exif Cleaner complete")
+#
+#main()
