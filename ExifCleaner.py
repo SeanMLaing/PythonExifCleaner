@@ -57,6 +57,8 @@ def ReadCommandLineArgs():
             if(Path(systemArgs[index + 1]).is_file()):
                 singleFile = True
                 filePath = Path(systemArgs[index + 1])
+                #runPath = Path.parent(filePath)
+                runPath = os.path.basename(filePath)
                 if(verbose):
                     print('Single file useage on path:')
                     print(filePath)
@@ -105,12 +107,28 @@ def PrintExifToConsole(image):
         print("exception when printing exif to console")
 
 def CreateNewExifCleanFolder(directory):
+    global verbose
+    global singleFile
+    
+    if(singleFile or IsImageFile):
+        directory = os.path.dirname(directory)
+        if(verbose):
+            print("Provided directory is a file")
+            print("new path:")
+            print(directory)
+
+
+    joinedDirPath = os.path.join(directory, dirname)
+
     dirExists = True
-    dirExists = os.path.exists(directory / dirname)  
+    dirExists = os.path.exists(joinedDirPath)  
+    
+    if(verbose):
+        print("Checking if a clean folder exists")
 
     if(dirExists == False): 
-        os.mkdir(directory / dirname)
-        if(os.path.exists(directory / dirname)): 
+        os.mkdir(joinedDirPath)
+        if(os.path.exists(joinedDirPath)): 
             print('Created '+dirname+'')
         else:
             print('Failed to create the ' + dirname + 'direcory')
@@ -128,20 +146,36 @@ def CleanExifAllLocalImages(localPath):
 
 def HandleSingleImage(filepath): 
     global verbose
-    # validate filepath
+    global dirname
+    if(verbose):
+        print("Starting single file")
     try:
         if(os.path.isfile(filepath) == False):
             print("Path is not a file, faiure")
             exit(1)
+        if(verbose):
+            print("check if filepath is an image:")
+            print(filepath)
+
+        if(IsImagePath(filepath) != True):
+            # is not image, need to break
+            if(verbose):
+                print("Provided path is not an image file: ")
+                print(filepath)
+            print("Not a filepath, quitting...")
+            exit(1)
+        else:
+            if(verbose):
+                print("Got an image at: ")
+                print(filepath)
 
         image = Image.open(filepath)
-        if(image != 'undefined' and image.format != 'png'): # Pillow will not remove exif from PNG by default
+        if(image != 'undefined'): 
             filename = image.filename.split('/')[-1]
             if(verbose):
                 print(filename)
                 print("Exif Before: ")
                 PrintExifToConsole(image)
-            global dirname
             prepath = localPath / dirname
             buildpath = prepath / filename 
 
@@ -152,9 +186,32 @@ def HandleSingleImage(filepath):
                 imageAfter = Image.open(buildpath)
                 print("Exif After: ")
                 PrintExifToConsole(imageAfter)
+        image.close()
     except Exception as error:
+        print("except at HandleSingleImage")
         print(error)
 
+def IsImagePath(filepath):
+    # returns true if provided filepath is an image
+    supportedImageTypes = ["jpg", "jpeg", "tiff", "im"] 
+    
+    # dev code
+    print(filepath)
+
+    for imgtype in supportedImageTypes:
+        try:
+            if(verbose):
+                print("Check if filetype is: " + imgtype)
+            if(os.path.basename(filepath).endswith(imgtype)):
+                return True
+        except Exception as error:
+            print("Not an image or failed to read file:")
+            print(filepath)
+
+    # If we got here it is not a supported image type
+    print("Not an image or not a supported type:")
+    print(filepath)
+    return False
 
 
 
@@ -162,13 +219,33 @@ def HandleSingleImage(filepath):
 # todo:
 # put in method
 # handle paths for multi / single / recursive
+def main():
+    print("Starting to clean exif from image(s)")
+    global singleFile
+    global runPath
+    global verbose
 
-ReadCommandLineArgs()
+    try:
+        ReadCommandLineArgs()
+        
+        if(verbose):
+            print("Got command line args")
+
+        CreateNewExifCleanFolder(runPath)
+
+        if(verbose):
+            print("created folder")
+
+        if(singleFile):
+            HandleSingleImage(filePath)
+
+        else:
+            CleanExifAllLocalImages(runPath)
+    except Exception as error:
+        print("except at main")
+        print(error)
 
 
-CreateNewExifCleanFolder(runPath)
-CleanExifAllLocalImages(runPath)
+    print("Exif Cleaner complete")
 
-
-
-
+main()
