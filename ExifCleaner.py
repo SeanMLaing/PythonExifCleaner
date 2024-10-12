@@ -84,11 +84,26 @@ def SingleFileHandler(filepath):
 def HandleDir(dirpath):
     global recursive
     global verbose
-    
+    global dirname 
+
     if(recursive):
         # get all dir in current
         # for each dir, call HandleDir
-        print("if")    
+        if(verbose):
+            print("Recursive, looking through: ")
+            print(dirpath)
+        childDirs = ListChildDirs(dirpath)
+        for cdir in childDirs:
+            if(os.path.dirname == dirname):
+                continue
+
+            if(verbose):
+                print("Found a child dir: ")
+                print(cdir)
+            HandleDir(cdir)
+    
+    # check for the exif cleaned dir
+    CreateNewExifCleanFolder(dirpath)
 
     for file in ListFilesInDir(dirpath):
         HandleSingleImage(dirpath / file)
@@ -109,8 +124,8 @@ def PrintExifToConsole(image):
 def CreateNewExifCleanFolder(directory):
     global verbose
     global singleFile
-    
-    if(singleFile or IsImageFile):
+    global dirname 
+    if(singleFile or IsImagePath(directory)):
         directory = os.path.dirname(directory)
         if(verbose):
             print("Provided directory is a file")
@@ -172,12 +187,13 @@ def HandleSingleImage(filepath):
         image = Image.open(filepath)
         if(image != 'undefined'): 
             filename = image.filename.split('/')[-1]
+            localPath = os.path.dirname(filepath)
             if(verbose):
                 print(filename)
                 print("Exif Before: ")
                 PrintExifToConsole(image)
-            prepath = localPath / dirname
-            buildpath = prepath / filename 
+            prepath = os.path.join(localPath, dirname)
+            buildpath = os.path.join(prepath, filename)
 
             image.save(buildpath)
             image.close()
@@ -240,7 +256,7 @@ def main():
             HandleSingleImage(filePath)
 
         else:
-            CleanExifAllLocalImages(runPath)
+            HandleDir(runPath)
     except Exception as error:
         print("except at main")
         print(error)
