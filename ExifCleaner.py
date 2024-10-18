@@ -27,13 +27,12 @@ def ProcessSingleImage(FilePath):
         print("# verify the exif cleaned dir exists in the files local dir")
         workingpath = os.path.dirname(FilePath)
         if not DoesExifCleanedDirExistLocally(workingpath): 
-            return False
-        else:
             if not CreateLocalExifCleanDir(workingpath):
                 return False
+
         cleandirpath = os.path.join(workingpath, DIRECTORYNAME)
 
-        print("# open the file")
+        # open the file
         image = Image.open(FilePath)
 
         print("# save a new version in the exif cleaned dir")
@@ -82,28 +81,41 @@ def IsSupportedFileType(FilePath):
 
 
 def DoesExifCleanedDirExistLocally(FilePath):
-    fileroot = os.path.dirname(FilePath)
-    
-    localdirs = os.listdir(fileroot)
-    
-    if(os.path.exists(os.path.join(fileroot, DIRECTORYNAME)
+    global DIRECTORYNAME
+
+    try:
+
+        fileroot = os.path.dirname(FilePath)
+        localdirs = os.listdir(fileroot)
+        joinedpath = os.path.join(fileroot, DIRECTORYNAME)
+
+        print(joinedpath)
+        print(os.path.exists(os.path.join(fileroot, DIRECTORYNAME)))
+
+
+        if(os.path.exists(os.path.join(fileroot, DIRECTORYNAME))):
             return True
+
+    except Exception as error:
+        print(error)
 
     return False
 
 
 def CreateLocalExifCleanDir(WorkingPath):
     global DIRECTORYNAME
-    
+   
+    print('does')
     if(DoesExifCleanedDirExistLocally(WorkingPath)):
         return True
     
     dirfullpath = os.path.join(WorkingPath, DIRECTORYNAME)
 
     try:
+        print('mkdir')
         os.mkdir(dirfullpath)
         
-        if(os.path.exists(joinedDirPath)): 
+        if(os.path.exists(dirfullpath)):
             return True
         else: 
             return False
@@ -111,6 +123,62 @@ def CreateLocalExifCleanDir(WorkingPath):
     except Exception as errmsg:
         print(errmsg)
         return False
+
+
+def HelpMenu(error):
+    print(error)
+    
+    print('HELP MENU')
+
+
+def GetCommandLineArgs():
+    global DIRPATH
+    global FILEPATH
+    global RECURSIVE
+    global DIRECTORYNAME
+    global SINGLEFILEMODE
+   
+
+    index = 0
+
+    for index in range(0, len(sys.args)):
+        arg = sys.args[index]
+        if(arg == '-r'):
+            RECURSIVE = True
+            index +=1 
+        elif(arg == '-f'):
+            # try parse the next arg as a path
+            if(len(sys.args)-1 < index +1):
+                HelpMenu('No path after -f argument')
+
+            if(os.path.exists(sys.args[index + 1])):
+                if not os.path.isfile(sys.args[index +1]):
+                    HelpMenu('Path after -f argument is not a file')
+
+                SINGLEFILEMODE = True
+                FILEPATH = sys.args[index + 1]
+                index += 2
+
+        elif(arg == 'p'):
+            if(len(sys.args)-1 < index +1):
+                HelpMenu('No path after -p argument')
+            if not os.path.exists(sys.args[index +1]):
+                HelpMenu('Path after -p argument is not a valid path')
+            if(os.path.isfile(sys.args[index +1])):
+                HelpMenu('Path after -p argument is a file, did you mean -f?');
+            
+            SINGLEFILEMODE = False
+            FILEPATH = sys.args[index +1]
+            index += 2
+
+        elif(arg == '-r'):
+            RECURSIVE = True
+            index += 1
+        else: 
+            HelpMenu('Invalid argument ' + arg)
+            index += 1
+
+
 
 
 def main():
@@ -122,7 +190,9 @@ def main():
     
     GetCommandLineArgs()
 
-    if(SINGLEFILEMODE):
+    if(SINGLEFILEMODE and RECURSIVE):
+        HelpMenu('-f and -r cannot be used at the same time')
+    elif(SINGLEFILEMODE):
         ProcessSingleFile(FILEPATH)
     else:
         ProcessDirectory(RUNPATH)
