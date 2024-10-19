@@ -1,7 +1,7 @@
 # Clean exif data from a JPEG file 
 from PIL import Image
 import os
-
+import sys
 #--------------------- Version 2 -------------------------
 
 # Global variables
@@ -85,8 +85,17 @@ def DoesExifCleanedDirExistLocally(FilePath):
 
     try:
 
-        fileroot = os.path.dirname(FilePath)
+        fileroot = FilePath
         localdirs = os.listdir(fileroot)
+
+        # VERIFY IF FILE PATH OR IF DIR PATH
+        if not os.path.exists(FilePath):
+            # not good here
+            HelpMenu('Path not found when trying to create Clean Exif Directory')
+        if(os.path.isfile(FilePath)):
+            fileroot = os.path.dirname(FilePath)
+
+
         joinedpath = os.path.join(fileroot, DIRECTORYNAME)
 
         print(joinedpath)
@@ -138,37 +147,42 @@ def GetCommandLineArgs():
     global DIRECTORYNAME
     global SINGLEFILEMODE
    
+    index = 1
 
-    index = 0
+    while index < len(sys.argv):
+        arg = sys.argv[index]
+        print('argument and index')
+        print(arg)
+        print(index)
 
-    for index in range(0, len(sys.args)):
-        arg = sys.args[index]
         if(arg == '-r'):
             RECURSIVE = True
             index +=1 
         elif(arg == '-f'):
             # try parse the next arg as a path
-            if(len(sys.args)-1 < index +1):
+            if(len(sys.argv)-1 < index +1):
                 HelpMenu('No path after -f argument')
 
-            if(os.path.exists(sys.args[index + 1])):
-                if not os.path.isfile(sys.args[index +1]):
+            if(os.path.exists(sys.argv[index + 1])):
+                if not os.path.isfile(sys.argv[index +1]):
                     HelpMenu('Path after -f argument is not a file')
 
                 SINGLEFILEMODE = True
-                FILEPATH = sys.args[index + 1]
+                FILEPATH = sys.argv[index + 1]
+                print(index)
                 index += 2
+                print(index)
 
-        elif(arg == 'p'):
-            if(len(sys.args)-1 < index +1):
+        elif(arg == '-p'):
+            if(len(sys.argv)-1 < index +1):
                 HelpMenu('No path after -p argument')
-            if not os.path.exists(sys.args[index +1]):
+            if not os.path.exists(sys.argv[index +1]):
                 HelpMenu('Path after -p argument is not a valid path')
-            if(os.path.isfile(sys.args[index +1])):
+            if(os.path.isfile(sys.argv[index +1])):
                 HelpMenu('Path after -p argument is a file, did you mean -f?');
             
             SINGLEFILEMODE = False
-            FILEPATH = sys.args[index +1]
+            FILEPATH = sys.argv[index +1]
             index += 2
 
         elif(arg == '-r'):
@@ -193,14 +207,14 @@ def main():
     if(SINGLEFILEMODE and RECURSIVE):
         HelpMenu('-f and -r cannot be used at the same time')
     elif(SINGLEFILEMODE):
-        ProcessSingleFile(FILEPATH)
+        ProcessSingleImage(FILEPATH)
     else:
         ProcessDirectory(RUNPATH)
 
 
-#main()
+main()
 #-------Testing----------
-print(ProcessSingleImage(os.path.abspath("/home/blendedcookie/Pictures/exifImages/Canon.jpg")))
+#print(ProcessSingleImage(os.path.abspath("/home/blendedcookie/Pictures/exifImages/Canon.jpg")))
 #--------------------- Version 2 -------------------------
 # global vars
 
