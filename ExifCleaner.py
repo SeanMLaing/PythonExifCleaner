@@ -150,6 +150,7 @@ def NonBreakError(error):
     print('A file was not processed due to the error: ' + error)
 
 
+
 def HelpMenu(error):
     print()
     print(error)
