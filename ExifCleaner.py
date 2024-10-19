@@ -151,8 +151,23 @@ def NonBreakError(error):
 
 
 def HelpMenu(error):
+    print()
     print(error)
-    print('HELP MENU')
+    print()
+    print()
+    print('Exif File Cleaner possible options:')
+    print()
+    print('Option:\t\t\tDescription')
+    print()
+    print('-p {DirectoryPath}\tSave a copy of all supported image types in the provided directory in a new directory')
+    print()
+    print('-f {FilePath}\t\tSave a copy of the provided file, if type is supported, in a new directory')
+    print()
+    print('-r\t\t\tWhen paired with the -p option recusively itterate through the directory and sub directories saving the supported image types in new directories in their parent folder')
+    print()
+    print('-h\t\t\tPrint this help menu') 
+
+
     exit(1)
 
 def GetCommandLineArgs():
@@ -181,9 +196,7 @@ def GetCommandLineArgs():
 
                 SINGLEFILEMODE = True
                 FILEPATH = sys.argv[index + 1]
-                print(index)
                 index += 2
-                print(index)
 
         elif(arg == '-p'):
             if(len(sys.argv)-1 < index +1):
@@ -200,6 +213,8 @@ def GetCommandLineArgs():
         elif(arg == '-r'):
             RECURSIVE = True
             index += 1
+        elif(arg == '-h'):
+            HelpMenu('-h provided')
         else: 
             HelpMenu('Invalid argument ' + arg)
             index += 1
