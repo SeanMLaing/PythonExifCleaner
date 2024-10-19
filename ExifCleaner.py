@@ -14,17 +14,17 @@ SUPPORTEDFILETYPES = ["jpg", "jpeg", "tiff", "im"]
 
 def ProcessSingleImage(FilePath):
     try:
-
         # verify it is a file not a dir
         if not os.path.isfile(FilePath): 
-            print(FilePath)
-            return False
+            NonBreakError('FilePath is not a file')
+            return True
 
         # verify it is a supported filetype
         if not IsSupportedFileType(FilePath): 
-            return False
+            NonBreakError('FilePath is not a supported file type: ' + FilePath)
+            return True
 
-        print("# verify the exif cleaned dir exists in the files local dir")
+        # verify the exif cleaned dir exists in the files local dir
         workingpath = os.path.dirname(FilePath)
         if not DoesExifCleanedDirExistLocally(workingpath): 
             if not CreateLocalExifCleanDir(workingpath):
@@ -35,15 +35,13 @@ def ProcessSingleImage(FilePath):
         # open the file
         image = Image.open(FilePath)
 
-        print("# save a new version in the exif cleaned dir")
+        # save a new version in the exif cleaned dir
         if(SaveNewImage(image, cleandirpath) == False):
             return False
-
-            print("# close file")
         image.close()
 
     except Exception as errmsg:
-        print(errmsg)
+        HelpMenu(errmsg)
 
     # success
     return True
@@ -61,8 +59,7 @@ def SaveNewImage(IMG, CleanDirPath):
                     return True            
 
     except Exception as errmsg:
-        print(errmsg)
-        return False
+        HelpMenu(errmsg)
 
     return False 
 
@@ -75,7 +72,7 @@ def IsSupportedFileType(FilePath):
             if(os.path.basename(FilePath).endswith(imgtype)):
                 return True
     except Exception as errmsg:
-        print(errmsg)
+        HelpMenu(errmsg)
         
     return False
 
@@ -84,7 +81,6 @@ def DoesExifCleanedDirExistLocally(FilePath):
     global DIRECTORYNAME
 
     try:
-
         fileroot = FilePath
         localdirs = os.listdir(fileroot)
 
@@ -95,18 +91,13 @@ def DoesExifCleanedDirExistLocally(FilePath):
         if(os.path.isfile(FilePath)):
             fileroot = os.path.dirname(FilePath)
 
-
         joinedpath = os.path.join(fileroot, DIRECTORYNAME)
-
-        print(joinedpath)
-        print(os.path.exists(os.path.join(fileroot, DIRECTORYNAME)))
-
 
         if(os.path.exists(os.path.join(fileroot, DIRECTORYNAME))):
             return True
 
     except Exception as error:
-        print(error)
+        HelpMenu(error)
 
     return False
 
@@ -114,14 +105,12 @@ def DoesExifCleanedDirExistLocally(FilePath):
 def CreateLocalExifCleanDir(WorkingPath):
     global DIRECTORYNAME
    
-    print('does')
     if(DoesExifCleanedDirExistLocally(WorkingPath)):
         return True
     
     dirfullpath = os.path.join(WorkingPath, DIRECTORYNAME)
 
     try:
-        print('mkdir')
         os.mkdir(dirfullpath)
         
         if(os.path.exists(dirfullpath)):
@@ -130,25 +119,41 @@ def CreateLocalExifCleanDir(WorkingPath):
             return False
 
     except Exception as errmsg:
-        print(errmsg)
-        return False
+        HelpMenu(errmsg)
 
 
 
 
 def ProcessDirectory(DirectoryPath):
-    # if file
+    global RECURSIVE
+    # if file then no
+    if not os.path.exists(DirectoryPath):
+        HelpMenu('Attempted to process invalid path')
 
+    if(os.path.isfile(DirectoryPath)):
+        HelpMenu('Tried to process a file as a directory')
+   
+    for item in os.listdir(DirectoryPath):
 
+        itemPath = os.path.join(DirectoryPath, item)
 
+        if not os.path.exists(itemPath):
+            HelpMenu('Got an invalid file path from the directory')
 
+        if(os.path.isfile(itemPath)):
+            if not ProcessSingleImage(itemPath):
+                HelpMenu('Failed to process the supplied image or path')
+        elif(RECURSIVE):
+            ProcessDirectory(itemPath)
+
+def NonBreakError(error):
+    print('A file was not processed due to the error: ' + error)
 
 
 def HelpMenu(error):
     print(error)
-    
     print('HELP MENU')
-
+    exit(1)
 
 def GetCommandLineArgs():
     global DIRPATH
@@ -161,9 +166,6 @@ def GetCommandLineArgs():
 
     while index < len(sys.argv):
         arg = sys.argv[index]
-        print('argument and index')
-        print(arg)
-        print(index)
 
         if(arg == '-r'):
             RECURSIVE = True
@@ -219,7 +221,7 @@ def main():
     elif(SINGLEFILEMODE):
         ProcessSingleImage(FILEPATH)
     else:
-        ProcessDirectory(RUNPATH)
+        ProcessDirectory(FILEPATH)
 
 
 main()
