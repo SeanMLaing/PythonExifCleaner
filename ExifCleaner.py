@@ -134,6 +134,16 @@ def CreateLocalExifCleanDir(WorkingPath):
         return False
 
 
+
+
+def ProcessDirectory(DirectoryPath):
+    # if file
+
+
+
+
+
+
 def HelpMenu(error):
     print(error)
     
